@@ -72,18 +72,20 @@ class ZapSignStrategy(SignatureProviderStrategy):
             raise Exception(f'Failed to cancel document in ZapSign: {str(e)}')
 
     def handle_webhook(self, payload: Dict) -> None:
-        event_type = payload.get('event')
+        event_type = payload.get('event_type') or payload.get('event')
         
         if event_type == 'doc_created':
-            logger.info(f'Document created: {payload.get("doc", {}).get("token")}')
+            logger.info(f'Document created: {payload.get("token") or payload.get("doc", {}).get("token")}')
         elif event_type == 'doc_signed':
-            logger.info(f'Document signed: {payload.get("doc", {}).get("token")}')
+            logger.info(f'Document signed: {payload.get("token") or payload.get("doc", {}).get("token")}')
         elif event_type == 'signer_signed':
-            logger.info(f'Signer signed: {payload.get("signer", {}).get("email")}')
+            signer_data = payload.get('signer', {})
+            logger.info(f'Signer signed: {signer_data.get("email")}')
         elif event_type == 'signer_authentication_failed':
-            logger.warning(f'Signer authentication failed: {payload.get("signer", {}).get("email")}')
+            signer_data = payload.get('unauthenticated_signer', {}) or payload.get('signer', {})
+            logger.warning(f'Signer authentication failed: {signer_data.get("email")}')
         elif event_type == 'email_bounce':
-            logger.warning(f'Email bounce: {payload.get("signer", {}).get("email")}')
+            logger.warning(f'Email bounce: {payload.get("email")}')
         else:
             logger.info(f'Unknown webhook event: {event_type}')
 

@@ -1,4 +1,8 @@
+import re
+import requests
 from rest_framework import serializers
+from django.core.validators import URLValidator
+from django.core.exceptions import ValidationError
 from apps.domain.models import Provider, Company, Document, Signer, DocumentAnalysis
 from apps.application.services.signature_service import SignatureService
 from apps.application.services.document_analysis_service import DocumentAnalysisService
@@ -54,6 +58,50 @@ class DocumentCreateSerializer(serializers.Serializer):
     )
     date_limit_to_sign = serializers.DateTimeField(required=False)
 
+    def validate_url_pdf(self, value):
+        validator = URLValidator()
+        try:
+            validator(value)
+        except ValidationError:
+            raise serializers.ValidationError('Invalid URL format')
+        
+        if not value.lower().endswith('.pdf'):
+            raise serializers.ValidationError('URL must point to a PDF file')
+        
+        try:
+            response = requests.head(value, timeout=10, allow_redirects=True)
+            if response.status_code == 200:
+                content_length = response.headers.get('Content-Length')
+                if content_length:
+                    try:
+                        file_size_mb = int(content_length) / (1024 * 1024)
+                        if file_size_mb > 10:
+                            raise serializers.ValidationError(f'PDF file size ({file_size_mb:.2f}MB) exceeds maximum limit of 10MB')
+                    except (ValueError, TypeError):
+                        pass
+        except requests.RequestException:
+            pass
+        
+        return value
+
+    def validate_signers(self, value):
+        if not value:
+            raise serializers.ValidationError('At least one signer is required')
+        
+        for signer in value:
+            if not signer.get('name'):
+                raise serializers.ValidationError('Signer name is required')
+            
+            if not signer.get('email'):
+                raise serializers.ValidationError('Signer email is required')
+            
+            email = signer.get('email', '')
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_pattern, email):
+                raise serializers.ValidationError(f'Invalid email format: {email}')
+        
+        return value
+
     def create(self, validated_data):
         company = self.context['company']
         created_by = self.context.get('user')
@@ -78,5 +126,20 @@ class DocumentAnalysisSerializer(serializers.ModelSerializer):
 class AddSignerSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=200)
     email = serializers.EmailField()
+
+    def validate_name(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError('Signer name is required and cannot be empty')
+        return value.strip()
+
+    def validate_email(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError('Signer email is required and cannot be empty')
+        
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, value):
+            raise serializers.ValidationError('Invalid email format')
+        
+        return value.strip()
 
 

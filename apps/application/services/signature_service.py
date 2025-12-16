@@ -1,8 +1,10 @@
 import logging
+import threading
 from typing import Dict, List, Optional
 from django.contrib.auth.models import User
 from apps.domain.models import Company, Document, Signer
 from apps.application.facades.signature_provider_facade import SignatureProviderFacade
+from apps.application.services.document_analysis_service import DocumentAnalysisService
 
 logger = logging.getLogger('apps')
 
@@ -51,7 +53,21 @@ class SignatureService:
                 status=self._map_signer_status(signer_data.get('status', 'pending')),
             )
 
+        self._trigger_automatic_analysis(document)
+        
         return document
+
+    def _trigger_automatic_analysis(self, document: Document) -> None:
+        def analyze_in_background():
+            try:
+                analysis_service = DocumentAnalysisService()
+                analysis_service.analyze_document(document)
+                logger.info(f'Automatic analysis completed for document {document.id}')
+            except Exception as e:
+                logger.error(f'Error in automatic analysis for document {document.id}: {str(e)}')
+        
+        thread = threading.Thread(target=analyze_in_background, daemon=True)
+        thread.start()
 
     def update_document_status(self, document: Document) -> Document:
         if not document.token:
@@ -60,10 +76,6 @@ class SignatureService:
         response = self.facade.get_document_status(document.company, document.token)
         
         document.provider_status = response.get('status', document.provider_status)
-        document.internal_status = self.facade.to_internal_status(
-            document.company,
-            document.provider_status
-        )
         
         signers_response = response.get('signers', [])
         for signer_data in signers_response:
@@ -76,8 +88,25 @@ class SignatureService:
                 except Signer.DoesNotExist:
                     pass
 
+        document.internal_status = self._calculate_internal_status(document, document.provider_status)
         document.save()
         return document
+
+    def _calculate_internal_status(self, document: Document, provider_status: str) -> str:
+        if provider_status in ['cancelled', 'rejected', 'expired']:
+            return provider_status
+        
+        if provider_status == 'signed':
+            all_signed = all(s.status == 'signed' for s in document.signers.all())
+            return 'signed' if all_signed else 'in_progress'
+        
+        signed_count = sum(1 for s in document.signers.all() if s.status == 'signed')
+        total_signers = document.signers.count()
+        
+        if signed_count > 0 and signed_count < total_signers:
+            return 'in_progress'
+        
+        return self.facade.to_internal_status(document.company, provider_status)
 
     def add_signer_to_document(
         self,

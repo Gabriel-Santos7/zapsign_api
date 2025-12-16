@@ -1,0 +1,93 @@
+INFO 2025-12-09 23:13:30,959 autoreload Watching for file changes with StatReloader
+INFO 2025-12-09 23:13:33,603 autoreload /app/apps/domain/models/__init__.py changed, reloading.
+INFO 2025-12-09 23:13:34,396 autoreload Watching for file changes with StatReloader
+INFO 2025-12-09 23:13:36,620 autoreload /app/zapsign_project/settings.py changed, reloading.
+INFO 2025-12-09 23:13:37,431 autoreload Watching for file changes with StatReloader
+INFO 2025-12-09 23:13:58,834 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:14:19,805 autoreload Watching for file changes with StatReloader
+INFO 2025-12-09 23:14:48,319 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:15:18,454 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:15:31,879 autoreload /app/apps/domain/migrations/0001_initial.py changed, reloading.
+INFO 2025-12-09 23:15:32,932 autoreload Watching for file changes with StatReloader
+INFO 2025-12-09 23:15:36,542 autoreload /app/apps/domain/migrations/0001_initial.py changed, reloading.
+INFO 2025-12-09 23:15:37,384 autoreload Watching for file changes with StatReloader
+INFO 2025-12-09 23:15:48,529 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:16:11,752 autoreload Watching for file changes with StatReloader
+INFO 2025-12-09 23:16:40,488 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:17:10,580 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:17:40,680 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:18:10,808 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:18:40,895 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:19:10,939 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:19:27,887 basehttp "GET /admin HTTP/1.1" 301 0
+INFO 2025-12-09 23:19:27,899 basehttp "GET /admin/ HTTP/1.1" 302 0
+INFO 2025-12-09 23:19:27,929 basehttp "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4209
+INFO 2025-12-09 23:19:27,988 basehttp "GET /static/admin/css/login.css HTTP/1.1" 200 951
+INFO 2025-12-09 23:19:27,988 basehttp "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 200 2810
+INFO 2025-12-09 23:19:27,990 basehttp "GET /static/admin/js/theme.js HTTP/1.1" 200 1653
+INFO 2025-12-09 23:19:27,990 basehttp "GET /static/admin/css/dark_mode.css HTTP/1.1" 200 2808
+INFO 2025-12-09 23:19:27,990 basehttp "GET /static/admin/css/base.css HTTP/1.1" 200 22120
+INFO 2025-12-09 23:19:27,990 basehttp "GET /static/admin/css/responsive.css HTTP/1.1" 200 16565
+INFO 2025-12-09 23:19:28,012 basehttp "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 200 3063
+INFO 2025-12-09 23:19:28,341 basehttp "GET /admin/ HTTP/1.1" 302 0
+INFO 2025-12-09 23:19:28,345 basehttp "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4209
+INFO 2025-12-09 23:19:28,662 basehttp "GET /admin/ HTTP/1.1" 302 0
+INFO 2025-12-09 23:19:28,665 basehttp "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4209
+INFO 2025-12-09 23:19:31,838 basehttp "POST /admin/login/?next=/admin/ HTTP/1.1" 302 0
+INFO 2025-12-09 23:19:31,862 basehttp "GET /admin/ HTTP/1.1" 200 7347
+INFO 2025-12-09 23:19:31,869 basehttp "GET /static/admin/css/dashboard.css HTTP/1.1" 200 441
+INFO 2025-12-09 23:19:31,915 basehttp "GET /static/admin/img/icon-addlink.svg HTTP/1.1" 200 331
+INFO 2025-12-09 23:19:31,915 basehttp "GET /static/admin/img/icon-changelink.svg HTTP/1.1" 200 380
+INFO 2025-12-09 23:19:36,668 basehttp "GET /admin/auth/user/add/ HTTP/1.1" 200 13151
+INFO 2025-12-09 23:19:36,679 basehttp "GET /static/admin/css/forms.css HTTP/1.1" 200 8525
+INFO 2025-12-09 23:19:36,680 basehttp "GET /static/admin/js/admin/RelatedObjectLookups.js HTTP/1.1" 200 9777
+INFO 2025-12-09 23:19:36,680 basehttp "GET /static/admin/js/core.js HTTP/1.1" 200 6208
+INFO 2025-12-09 23:19:36,680 basehttp "GET /static/admin/js/jquery.init.js HTTP/1.1" 200 347
+INFO 2025-12-09 23:19:36,683 basehttp "GET /static/admin/css/unusable_password_field.css HTTP/1.1" 200 663
+INFO 2025-12-09 23:19:36,683 basehttp "GET /static/admin/js/urlify.js HTTP/1.1" 200 7887
+INFO 2025-12-09 23:19:36,684 basehttp "GET /static/admin/js/actions.js HTTP/1.1" 200 8076
+INFO 2025-12-09 23:19:36,686 basehttp "GET /static/admin/js/prepopulate.js HTTP/1.1" 200 1531
+INFO 2025-12-09 23:19:36,688 basehttp "GET /static/admin/js/vendor/jquery/jquery.js HTTP/1.1" 200 285314
+INFO 2025-12-09 23:19:36,688 basehttp "GET /static/admin/js/prepopulate_init.js HTTP/1.1" 200 586
+INFO 2025-12-09 23:19:36,691 basehttp "GET /static/admin/js/vendor/xregexp/xregexp.js HTTP/1.1" 200 325171
+INFO 2025-12-09 23:19:36,695 basehttp "GET /admin/jsi18n/ HTTP/1.1" 200 8514
+INFO 2025-12-09 23:19:36,726 basehttp "GET /static/admin/css/widgets.css HTTP/1.1" 200 11973
+INFO 2025-12-09 23:19:36,729 basehttp "GET /static/admin/js/change_form.js HTTP/1.1" 200 606
+INFO 2025-12-09 23:19:36,745 basehttp "GET /static/admin/js/unusable_password_field.js HTTP/1.1" 200 1480
+INFO 2025-12-09 23:19:37,680 basehttp "GET /admin/ HTTP/1.1" 200 7347
+INFO 2025-12-09 23:19:38,475 basehttp "GET /admin/auth/group/add/ HTTP/1.1" 200 14647
+INFO 2025-12-09 23:19:38,486 basehttp "GET /static/admin/js/SelectBox.js HTTP/1.1" 200 4530
+INFO 2025-12-09 23:19:38,486 basehttp "GET /static/admin/js/SelectFilter2.js HTTP/1.1" 200 15845
+INFO 2025-12-09 23:19:38,497 basehttp "GET /admin/jsi18n/ HTTP/1.1" 200 8514
+INFO 2025-12-09 23:19:38,545 basehttp "GET /static/admin/img/search.svg HTTP/1.1" 200 458
+INFO 2025-12-09 23:19:38,545 basehttp "GET /static/admin/img/selector-icons.svg HTTP/1.1" 200 3291
+INFO 2025-12-09 23:19:39,846 basehttp "GET /admin/ HTTP/1.1" 200 7347
+INFO 2025-12-09 23:19:40,733 basehttp "GET /admin/authtoken/tokenproxy/add/ HTTP/1.1" 200 10370
+INFO 2025-12-09 23:19:40,740 basehttp "GET /static/admin/img/icon-viewlink.svg HTTP/1.1" 200 581
+INFO 2025-12-09 23:19:40,752 basehttp "GET /admin/jsi18n/ HTTP/1.1" 200 8514
+INFO 2025-12-09 23:19:41,007 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:19:44,301 basehttp "GET /admin/ HTTP/1.1" 200 7347
+INFO 2025-12-09 23:20:11,090 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:20:41,157 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:21:11,291 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:21:41,368 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:22:11,522 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:22:41,608 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:23:11,690 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:23:41,747 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:24:11,822 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:24:41,907 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:25:11,974 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:25:42,045 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:26:12,125 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:26:42,188 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:27:12,265 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:27:42,323 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:28:12,385 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:28:42,448 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:29:12,519 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:29:42,597 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:30:12,688 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:30:42,775 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:31:12,848 basehttp "GET /health/ HTTP/1.1" 200 39
+INFO 2025-12-09 23:31:42,915 basehttp "GET /health/ HTTP/1.1" 200 39

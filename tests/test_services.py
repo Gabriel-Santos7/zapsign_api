@@ -53,25 +53,35 @@ class TestSignatureService:
 @pytest.mark.django_db
 class TestDocumentAnalysisService:
     @patch('apps.application.services.document_analysis_service.PDFExtractorService')
-    @patch('apps.application.services.document_analysis_service.OpenAI')
-    def test_analyze_document(self, mock_openai_class, mock_pdf_extractor_class, document):
+    @patch('apps.application.services.document_analysis_service.spacy.load')
+    def test_analyze_document(self, mock_spacy_load, mock_pdf_extractor_class, document):
         mock_pdf_extractor = Mock()
-        mock_pdf_extractor.extract_text_from_url.return_value = 'Sample document text'
+        mock_pdf_extractor.extract_text_from_url.return_value = 'Este é um documento de teste. Contém informações importantes sobre um contrato. O documento estabelece os termos e condições.'
         mock_pdf_extractor_class.return_value = mock_pdf_extractor
         
-        mock_openai = Mock()
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = '{"summary": "Test summary", "missing_topics": [], "insights": {}}'
-        mock_openai.chat.completions.create.return_value = mock_response
-        mock_openai_class.return_value = mock_openai
+        mock_nlp = Mock()
+        mock_doc = Mock()
+        mock_doc.__iter__ = Mock(return_value=iter([]))
+        mock_doc.ents = []
+        mock_doc.noun_chunks = []
+        mock_sent1 = Mock()
+        mock_sent1.text = 'Este é um documento de teste.'
+        mock_sent2 = Mock()
+        mock_sent2.text = 'Contém informações importantes sobre um contrato.'
+        mock_sent3 = Mock()
+        mock_sent3.text = 'O documento estabelece os termos e condições.'
+        mock_doc.sents = [mock_sent1, mock_sent2, mock_sent3]
+        mock_nlp.return_value = mock_doc
+        mock_spacy_load.return_value = mock_nlp
         
         service = DocumentAnalysisService(mock_pdf_extractor)
-        service.openai_client = mock_openai
+        service.nlp = mock_nlp
         
         analysis = service.analyze_document(document)
         
         assert analysis.document == document
-        assert analysis.summary == 'Test summary'
+        assert analysis.summary is not None
+        assert isinstance(analysis.missing_topics, list)
+        assert isinstance(analysis.insights, dict)
 
 

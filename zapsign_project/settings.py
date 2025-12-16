@@ -164,8 +164,6 @@ LOGGING = {
     },
 }
 
-OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
-
 ZAPSIGN_SANDBOX_URL = config('ZAPSIGN_SANDBOX_URL', default='https://sandbox.api.zapsign.com.br')
 ZAPSIGN_PRODUCTION_URL = config('ZAPSIGN_PRODUCTION_URL', default='https://api.zapsign.com.br')
 

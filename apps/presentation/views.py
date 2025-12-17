@@ -12,6 +12,7 @@ from apps.presentation.serializers import (
 from apps.application.services.signature_service import SignatureService
 from apps.application.services.document_analysis_service import DocumentAnalysisService
 from apps.presentation.alerts import get_document_alerts, get_document_metrics
+from apps.presentation.utils import error_response
 
 
 class ProviderViewSet(viewsets.ReadOnlyModelViewSet):
@@ -62,8 +63,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
             service = DocumentAnalysisService()
             analysis = service.analyze_document(document)
             return Response(DocumentAnalysisSerializer(analysis).data, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return error_response(str(e), status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return error_response('Failed to analyze document', status.HTTP_500_INTERNAL_SERVER_ERROR, {'detail': str(e)})
 
     @action(detail=True, methods=['get'])
     def insights(self, request, company_pk=None, pk=None):
@@ -72,7 +75,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
             analysis = document.analysis
             return Response(DocumentAnalysisSerializer(analysis).data, status=status.HTTP_200_OK)
         except DocumentAnalysis.DoesNotExist:
-            return Response({'error': 'Document has not been analyzed yet'}, status=status.HTTP_404_NOT_FOUND)
+            return error_response('Document has not been analyzed yet', status.HTTP_404_NOT_FOUND)
 
     @action(detail=True, methods=['post'])
     def add_signer(self, request, company_pk=None, pk=None):
@@ -84,8 +87,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
             service = SignatureService()
             signer = service.add_signer_to_document(document, serializer.validated_data)
             return Response(SignerSerializer(signer).data, status=status.HTTP_201_CREATED)
+        except ValueError as e:
+            return error_response(str(e), status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return error_response('Failed to add signer', status.HTTP_500_INTERNAL_SERVER_ERROR, {'detail': str(e)})
 
     @action(detail=True, methods=['post'])
     def cancel(self, request, company_pk=None, pk=None):
@@ -94,8 +99,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
             service = SignatureService()
             document = service.cancel_document(document)
             return Response(DocumentSerializer(document).data, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return error_response(str(e), status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return error_response('Failed to cancel document', status.HTTP_500_INTERNAL_SERVER_ERROR, {'detail': str(e)})
 
     @action(detail=True, methods=['post'])
     def refresh_status(self, request, company_pk=None, pk=None):
@@ -104,8 +111,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
             service = SignatureService()
             document = service.update_document_status(document)
             return Response(DocumentSerializer(document).data, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return error_response(str(e), status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return error_response('Failed to refresh document status', status.HTTP_500_INTERNAL_SERVER_ERROR, {'detail': str(e)})
 
     @action(detail=False, methods=['get'])
     def alerts(self, request, company_pk=None):

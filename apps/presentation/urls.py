@@ -1,5 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from rest_framework.authtoken.views import obtain_auth_token
 from .views import ProviderViewSet, CompanyViewSet, DocumentViewSet, SignerViewSet
 from .webhooks import webhook_handler
 
@@ -8,6 +9,7 @@ router.register(r'providers', ProviderViewSet, basename='provider')
 router.register(r'companies', CompanyViewSet, basename='company')
 
 urlpatterns = [
+    path('api-token-auth/', obtain_auth_token, name='api-token-auth'),
     path('', include(router.urls)),
     path('companies/<int:company_pk>/documents/', DocumentViewSet.as_view({
         'get': 'list',

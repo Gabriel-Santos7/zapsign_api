@@ -1,5 +1,6 @@
 import requests
 import logging
+from datetime import datetime
 from typing import Dict, List
 from apps.domain.interfaces.signature_provider_strategy import SignatureProviderStrategy
 
@@ -14,6 +15,27 @@ class ZapSignStrategy(SignatureProviderStrategy):
             'Authorization': f'Bearer {api_token}',
             'Content-Type': 'application/json'
         }
+
+    def _serialize_datetime(self, value):
+        if isinstance(value, datetime):
+            return value.isoformat()
+        return value
+
+    def _clean_payload(self, payload: Dict) -> Dict:
+        cleaned = {}
+        for key, value in payload.items():
+            if isinstance(value, datetime):
+                cleaned[key] = value.isoformat()
+            elif isinstance(value, dict):
+                cleaned[key] = self._clean_payload(value)
+            elif isinstance(value, list):
+                cleaned[key] = [
+                    self._clean_payload(item) if isinstance(item, dict) else self._serialize_datetime(item)
+                    for item in value
+                ]
+            else:
+                cleaned[key] = value
+        return cleaned
 
     def create_document(
         self,
@@ -30,10 +52,21 @@ class ZapSignStrategy(SignatureProviderStrategy):
             **kwargs
         }
         
+        # Clean payload to ensure datetime objects are serialized
+        payload = self._clean_payload(payload)
+        
         try:
             response = requests.post(url, json=payload, headers=self.headers, timeout=30)
             response.raise_for_status()
             return response.json()
+        except requests.exceptions.HTTPError as e:
+            error_detail = 'Unknown error'
+            try:
+                error_detail = response.json() if response.text else str(e)
+            except:
+                error_detail = response.text[:500] if response.text else str(e)
+            logger.error(f'Error creating document in ZapSign: {e.response.status_code} - {error_detail}')
+            raise Exception(f'Failed to create document in ZapSign: {e.response.status_code} - {error_detail}')
         except requests.exceptions.RequestException as e:
             logger.error(f'Error creating document in ZapSign: {str(e)}')
             raise Exception(f'Failed to create document in ZapSign: {str(e)}')
@@ -51,6 +84,9 @@ class ZapSignStrategy(SignatureProviderStrategy):
 
     def add_signer(self, doc_token: str, signer_data: Dict) -> Dict:
         url = f'{self.base_url}/api/v1/documents/{doc_token}/signers'
+        
+        # Clean signer_data to ensure datetime objects are serialized
+        signer_data = self._clean_payload(signer_data)
         
         try:
             response = requests.post(url, json=signer_data, headers=self.headers, timeout=30)

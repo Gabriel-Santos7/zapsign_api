@@ -68,16 +68,41 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'zapsign_project.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('POSTGRES_DB', default='zapsign_db'),
-        'USER': config('POSTGRES_USER', default='zapsign_user'),
-        'PASSWORD': config('POSTGRES_PASSWORD', default='zapsign_pass'),
-        'HOST': config('DB_HOST', default='db'),
-        'PORT': config('DB_PORT', default='5432'),
+# Configuração do banco de dados
+# Render fornece DATABASE_URL, Docker Compose usa variáveis individuais
+DATABASE_URL = config('DATABASE_URL', default=None)
+
+if DATABASE_URL:
+    # Render ou outros serviços que fornecem DATABASE_URL
+    try:
+        import dj_database_url
+        DATABASES = {
+            'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+        }
+    except ImportError:
+        # Fallback se dj-database-url não estiver instalado
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': config('POSTGRES_DB', default='zapsign_db'),
+                'USER': config('POSTGRES_USER', default='zapsign_user'),
+                'PASSWORD': config('POSTGRES_PASSWORD', default='zapsign_pass'),
+                'HOST': config('DB_HOST', default='db'),
+                'PORT': config('DB_PORT', default='5432'),
+            }
+        }
+else:
+    # Docker Compose ou desenvolvimento local
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('POSTGRES_DB', default='zapsign_db'),
+            'USER': config('POSTGRES_USER', default='zapsign_user'),
+            'PASSWORD': config('POSTGRES_PASSWORD', default='zapsign_pass'),
+            'HOST': config('DB_HOST', default='db'),
+            'PORT': config('DB_PORT', default='5432'),
+        }
     }
-}
 
 AUTH_PASSWORD_VALIDATORS = [
     {

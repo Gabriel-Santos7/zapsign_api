@@ -17,7 +17,12 @@ COPY . /app/
 
 RUN mkdir -p /app/logs
 
+# Tornar o script de start executável
+RUN chmod +x /app/start.sh
+
+# Expor porta dinâmica (Render usa variável PORT, padrão 8000)
 EXPOSE 8000
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Usar script de start que lê a variável PORT do ambiente
+CMD ["/app/start.sh"]
 

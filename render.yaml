@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: zapsign-api
+    env: python
+    buildCommand: pip install -r requirements.txt && python manage.py migrate
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --access-logfile - --error-logfile - zapsign_project.wsgi:application
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DEBUG
+        value: False
+      - key: ALLOWED_HOSTS
+        value: your-app-name.onrender.com,localhost,127.0.0.1
+      - key: DATABASE_URL
+        fromDatabase:
+          name: zapsign-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://your-frontend-domain.com,http://localhost:4200
+
+databases:
+  - name: zapsign-db
+    databaseName: zapsign_db
+    user: zapsign_user
+    plan: free
+

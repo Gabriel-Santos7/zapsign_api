@@ -11,9 +11,15 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-in-production'
 
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-
-allowed_hosts_default = '*' if not DEBUG else 'localhost,127.0.0.1'
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default=allowed_hosts_default, cast=lambda v: [s.strip() for s in v.split(',')] if v else ['*'])
+allowed_hosts_env = config('ALLOWED_HOSTS', default=None)
+if allowed_hosts_env:
+    ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(',')]
+elif not DEBUG:
+    # Em produção: inclui domínio do Render
+    ALLOWED_HOSTS = ['zapsign-api.onrender.com', '*']
+else:
+    # Desenvolvimento: localhost e domínio do Render (para testes)
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'zapsign-api.onrender.com']
 
 INSTALLED_APPS = [
     'django.contrib.admin',

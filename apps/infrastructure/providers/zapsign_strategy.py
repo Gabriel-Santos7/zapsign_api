@@ -78,6 +78,18 @@ class ZapSignStrategy(SignatureProviderStrategy):
             response = requests.get(url, headers=self.headers, timeout=30)
             response.raise_for_status()
             return response.json()
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                # Documento não encontrado no ZapSign - pode ter sido deletado ou nunca existiu
+                logger.warning(f'Document not found in ZapSign: {token}')
+                # Retorna um status padrão indicando que o documento não foi encontrado
+                return {
+                    'status': 'not_found',
+                    'signers': []
+                }
+            else:
+                logger.error(f'HTTP error getting document status from ZapSign: {str(e)}')
+                raise Exception(f'Failed to get document status from ZapSign: {str(e)}')
         except requests.exceptions.RequestException as e:
             logger.error(f'Error getting document status from ZapSign: {str(e)}')
             raise Exception(f'Failed to get document status from ZapSign: {str(e)}')

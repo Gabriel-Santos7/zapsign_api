@@ -73,7 +73,20 @@ class SignatureService:
         if not document.token:
             raise ValueError('Document token is required to update status')
 
-        response = self.facade.get_document_status(document.company, document.token)
+        try:
+            response = self.facade.get_document_status(document.company, document.token)
+        except Exception as e:
+            # Se o documento não foi encontrado no provider, mantém o status atual
+            if '404' in str(e) or 'not found' in str(e).lower():
+                logger.warning(f'Document {document.token} not found in provider, keeping current status')
+                return document
+            # Para outros erros, propaga a exceção
+            raise
+        
+        # Se o provider retornou 'not_found', mantém o status atual
+        if response.get('status') == 'not_found':
+            logger.warning(f'Document {document.token} not found in provider, keeping current status')
+            return document
         
         document.provider_status = response.get('status', document.provider_status)
         

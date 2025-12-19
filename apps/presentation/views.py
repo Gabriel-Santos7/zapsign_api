@@ -1,3 +1,4 @@
+import logging
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -13,6 +14,8 @@ from apps.application.services.signature_service import SignatureService
 from apps.application.services.document_analysis_service import DocumentAnalysisService
 from apps.presentation.alerts import get_document_alerts, get_document_metrics
 from apps.presentation.utils import error_response
+
+logger = logging.getLogger('apps')
 
 
 class ProviderViewSet(viewsets.ReadOnlyModelViewSet):
@@ -114,6 +117,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
         except ValueError as e:
             return error_response(str(e), status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            # Se o documento não foi encontrado no provider, retorna o documento atual
+            if '404' in str(e) or 'not found' in str(e).lower() or 'not_found' in str(e):
+                logger.warning(f'Document {document.id} not found in provider, returning current status')
+                return Response(DocumentSerializer(document).data, status=status.HTTP_200_OK)
             return error_response('Failed to refresh document status', status.HTTP_500_INTERNAL_SERVER_ERROR, {'detail': str(e)})
 
     @action(detail=False, methods=['get'])

@@ -227,3 +227,10 @@ ZAPSIGN_PRODUCTION_URL = config('ZAPSIGN_PRODUCTION_URL', default='https://api.z
 SPACY_MODEL = config('SPACY_MODEL', default='pt_core_news_lg')
 ANALYSIS_SUMMARY_LENGTH = config('ANALYSIS_SUMMARY_LENGTH', default=5, cast=int)
 
+# Google Gemini API Configuration
+GEMINI_API_KEY = config('GEMINI_API_KEY', default=None)
+GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-3-flash-preview')
+GEMINI_ENABLED = config('GEMINI_ENABLED', default=True, cast=bool)
+GEMINI_MAX_TEXT_LENGTH = config('GEMINI_MAX_TEXT_LENGTH', default=50000, cast=int)
+GEMINI_TIMEOUT = config('GEMINI_TIMEOUT', default=30, cast=int)
+

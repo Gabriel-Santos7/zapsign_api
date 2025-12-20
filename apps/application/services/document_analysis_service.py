@@ -6,6 +6,13 @@ from collections import Counter
 from django.conf import settings
 from apps.domain.models import Document, DocumentAnalysis
 from apps.infrastructure.services.pdf_extractor import PDFExtractorService
+from apps.infrastructure.services.gemini_analyzer import (
+    GeminiAnalyzerService,
+    GeminiAPIError,
+    GeminiRateLimitError,
+    GeminiTimeoutError,
+    GeminiParseError
+)
 
 logger = logging.getLogger('apps')
 
@@ -44,49 +51,115 @@ class DocumentAnalysisService:
                 DocumentAnalysisService._nlp_model = False
         return DocumentAnalysisService._nlp_model if DocumentAnalysisService._nlp_model else None
 
-    def analyze_document(self, document: Document, model: str = 'spacy') -> DocumentAnalysis:
+    def analyze_document(self, document: Document, model: str = 'auto') -> DocumentAnalysis:
         start_time = time.time()
-        nlp_model = self.nlp
-        if not nlp_model:
-            raise ValueError('spaCy model is not configured. Please install a model: python -m spacy download pt_core_news_sm')
-
         text = self.pdf_extractor.extract_text_from_url(document.file_url)
         
         if not text.strip():
             raise ValueError('No text could be extracted from the PDF')
 
-        try:
-            analysis_data = self._analyze_with_spacy(text)
-            processing_time = time.time() - start_time
+        provider_used = 'spacy'
+        fallback_reason = None
+        analysis_data = None
+        gemini_tokens_used = None
+        gemini_model = None
+        
+        # Try Gemini first if enabled and API key is configured
+        gemini_enabled = getattr(settings, 'GEMINI_ENABLED', True)
+        gemini_api_key = getattr(settings, 'GEMINI_API_KEY', None)
+        
+        if gemini_enabled and gemini_api_key and model != 'spacy':
+            try:
+                logger.info(f'Attempting to analyze document {document.id} with Gemini')
+                gemini_service = GeminiAnalyzerService()
+                gemini_result = gemini_service.analyze_text(text)
+                
+                # Convert Gemini result to expected format
+                analysis_data = {
+                    'missing_topics': gemini_result.get('missing_topics', []),
+                    'summary': gemini_result.get('summary', ''),
+                    'insights': gemini_result.get('insights', {}),
+                    'sentences': [],  # Gemini doesn't provide sentences
+                }
+                
+                provider_used = 'gemini'
+                gemini_tokens_used = gemini_result.get('tokens_used')
+                gemini_model = getattr(settings, 'GEMINI_MODEL', 'gemini-3-flash-preview')
+                
+                logger.info(f'Successfully analyzed document {document.id} with Gemini')
+                
+            except GeminiRateLimitError as e:
+                logger.warning(f'Gemini rate limit reached for document {document.id}, falling back to spaCy')
+                fallback_reason = 'rate_limit'
+            except GeminiTimeoutError as e:
+                logger.warning(f'Gemini timeout for document {document.id}, falling back to spaCy')
+                fallback_reason = 'timeout'
+            except (GeminiParseError, GeminiAPIError) as e:
+                logger.warning(f'Gemini API error for document {document.id}: {str(e)}, falling back to spaCy')
+                fallback_reason = 'api_error'
+            except Exception as e:
+                logger.warning(f'Unexpected error with Gemini for document {document.id}: {str(e)}, falling back to spaCy')
+                fallback_reason = 'unexpected_error'
+        
+        # Fallback to spaCy if Gemini wasn't used or failed
+        if not analysis_data:
+            if provider_used == 'spacy' and not gemini_api_key:
+                logger.info(f'Gemini API key not configured, using spaCy for document {document.id}')
+                fallback_reason = 'not_configured'
             
-            # Get model name
-            model_name = 'unknown'
+            nlp_model = self.nlp
+            if not nlp_model:
+                raise ValueError('spaCy model is not configured. Please install a model: python -m spacy download pt_core_news_sm')
+            
+            try:
+                analysis_data = self._analyze_with_spacy(text)
+                provider_used = 'spacy'
+            except Exception as e:
+                logger.error(f'Error analyzing document {document.id} with spaCy: {str(e)}')
+                raise Exception(f'Failed to analyze document: {str(e)}')
+        
+        processing_time = time.time() - start_time
+        
+        # Get model name for metadata
+        model_name = 'unknown'
+        if provider_used == 'spacy':
+            nlp_model = self.nlp
             if nlp_model:
                 model_name = nlp_model.meta.get('name', 'spacy')
-            
-            # Prepare metadata
-            metadata = {
-                'processing_time_seconds': round(processing_time, 2),
-                'model_name': model_name,
-                'sentences_analyzed': len(analysis_data.get('sentences', [])),
-                'algorithm_version': '2.0'
+        else:
+            model_name = gemini_model or 'gemini-3-flash-preview'
+        
+        # Prepare metadata
+        metadata = {
+            'processing_time_seconds': round(processing_time, 2),
+            'model_name': model_name,
+            'provider_used': provider_used,
+            'algorithm_version': '2.0'
+        }
+        
+        if provider_used == 'gemini':
+            if gemini_tokens_used:
+                metadata['gemini_tokens_used'] = gemini_tokens_used
+            if gemini_model:
+                metadata['gemini_model'] = gemini_model
+        else:
+            metadata['sentences_analyzed'] = len(analysis_data.get('sentences', []))
+        
+        if fallback_reason:
+            metadata['fallback_reason'] = fallback_reason
+        
+        analysis, created = DocumentAnalysis.objects.update_or_create(
+            document=document,
+            defaults={
+                'missing_topics': analysis_data.get('missing_topics', []),
+                'summary': analysis_data.get('summary', ''),
+                'insights': analysis_data.get('insights', {}),
+                'model_used': provider_used,
+                'analysis_metadata': metadata,
             }
-            
-            analysis, created = DocumentAnalysis.objects.update_or_create(
-                document=document,
-                defaults={
-                    'missing_topics': analysis_data.get('missing_topics', []),
-                    'summary': analysis_data.get('summary', ''),
-                    'insights': analysis_data.get('insights', {}),
-                    'model_used': model,
-                    'analysis_metadata': metadata,
-                }
-            )
-            
-            return analysis
-        except Exception as e:
-            logger.error(f'Error analyzing document {document.id} with spaCy: {str(e)}')
-            raise Exception(f'Failed to analyze document: {str(e)}')
+        )
+        
+        return analysis
 
     def _analyze_with_spacy(self, text: str) -> Dict:
         nlp_model = self.nlp

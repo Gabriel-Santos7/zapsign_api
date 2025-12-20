@@ -250,5 +250,127 @@ class TestDocumentAnalysisService:
         if 'multa' in mock_pdf_extractor.extract_text_from_url.return_value.lower():
             # Should identify risk related to penalties
             assert len(analysis.insights['risks']) > 0
+    
+    @patch('apps.application.services.document_analysis_service.PDFExtractorService')
+    @patch('apps.application.services.document_analysis_service.GeminiAnalyzerService')
+    @patch('apps.application.services.document_analysis_service.settings')
+    def test_analyze_document_with_gemini(self, mock_settings, mock_gemini_class, mock_pdf_extractor_class, document):
+        """Test document analysis with Gemini API"""
+        # Configure settings mock
+        mock_settings.GEMINI_ENABLED = True
+        mock_settings.GEMINI_API_KEY = 'test_api_key'
+        mock_settings.GEMINI_MODEL = 'gemini-3-flash-preview'
+        
+        mock_pdf_extractor = Mock()
+        mock_pdf_extractor.extract_text_from_url.return_value = (
+            'Este é um documento de teste. '
+            'O contrato estabelece prazo de 30 dias para entrega. '
+            'O valor total é de R$ 10.000,00.'
+        )
+        mock_pdf_extractor_class.return_value = mock_pdf_extractor
+        
+        # Mock Gemini service
+        mock_gemini_service = Mock()
+        mock_gemini_service.analyze_text.return_value = {
+            'summary': 'Resumo executivo gerado pelo Gemini',
+            'missing_topics': ['Prazo', 'Valor'],
+            'insights': {
+                'key_points': ['Ponto-chave 1'],
+                'recommendations': ['Recomendação 1'],
+                'risks': ['Risco 1'],
+                'obligations_and_rights': ['Obrigação 1']
+            },
+            'tokens_used': 150
+        }
+        mock_gemini_class.return_value = mock_gemini_service
+        
+        service = DocumentAnalysisService(mock_pdf_extractor)
+        
+        analysis = service.analyze_document(document)
+        
+        assert analysis.document == document
+        assert analysis.summary == 'Resumo executivo gerado pelo Gemini'
+        assert 'Prazo' in analysis.missing_topics
+        assert analysis.model_used == 'gemini'
+        assert analysis.analysis_metadata['provider_used'] == 'gemini'
+        assert analysis.analysis_metadata.get('gemini_tokens_used') == 150
+    
+    @patch('apps.application.services.document_analysis_service.PDFExtractorService')
+    @patch('apps.application.services.document_analysis_service.GeminiAnalyzerService')
+    @patch('apps.application.services.document_analysis_service.settings')
+    @patch('apps.application.services.document_analysis_service.spacy.load')
+    def test_analyze_document_fallback_to_spacy(self, mock_spacy_load, mock_settings, mock_gemini_class, mock_pdf_extractor_class, document):
+        """Test fallback to spaCy when Gemini fails"""
+        # Configure settings mock
+        mock_settings.GEMINI_ENABLED = True
+        mock_settings.GEMINI_API_KEY = 'test_api_key'
+        
+        mock_pdf_extractor = Mock()
+        mock_pdf_extractor.extract_text_from_url.return_value = (
+            'Este é um documento de teste. '
+            'O contrato estabelece prazo de 30 dias.'
+        )
+        mock_pdf_extractor_class.return_value = mock_pdf_extractor
+        
+        # Mock Gemini to raise rate limit error
+        from apps.infrastructure.services.gemini_analyzer import GeminiRateLimitError
+        mock_gemini_service = Mock()
+        mock_gemini_service.analyze_text.side_effect = GeminiRateLimitError('Rate limit exceeded')
+        mock_gemini_class.return_value = mock_gemini_service
+        
+        # Mock spaCy
+        mock_nlp = Mock()
+        mock_doc = Mock()
+        mock_doc.__iter__ = Mock(return_value=iter([]))
+        mock_doc.ents = []
+        mock_doc.noun_chunks = []
+        mock_doc.sents = [Mock(text='Este é um documento de teste.')]
+        mock_nlp.return_value = mock_doc
+        mock_nlp.meta = {'name': 'pt_core_news_sm'}
+        mock_spacy_load.return_value = mock_nlp
+        
+        service = DocumentAnalysisService(mock_pdf_extractor)
+        service.nlp = mock_nlp
+        
+        analysis = service.analyze_document(document)
+        
+        assert analysis.document == document
+        assert analysis.model_used == 'spacy'
+        assert analysis.analysis_metadata['provider_used'] == 'spacy'
+        assert analysis.analysis_metadata['fallback_reason'] == 'rate_limit'
+    
+    @patch('apps.application.services.document_analysis_service.PDFExtractorService')
+    @patch('apps.application.services.document_analysis_service.settings')
+    @patch('apps.application.services.document_analysis_service.spacy.load')
+    def test_analyze_document_no_gemini_key_uses_spacy(self, mock_spacy_load, mock_settings, mock_pdf_extractor_class, document):
+        """Test that spaCy is used when Gemini API key is not configured"""
+        # Configure settings mock - no API key
+        mock_settings.GEMINI_ENABLED = True
+        mock_settings.GEMINI_API_KEY = None
+        
+        mock_pdf_extractor = Mock()
+        mock_pdf_extractor.extract_text_from_url.return_value = 'Este é um documento de teste.'
+        mock_pdf_extractor_class.return_value = mock_pdf_extractor
+        
+        # Mock spaCy
+        mock_nlp = Mock()
+        mock_doc = Mock()
+        mock_doc.__iter__ = Mock(return_value=iter([]))
+        mock_doc.ents = []
+        mock_doc.noun_chunks = []
+        mock_doc.sents = [Mock(text='Este é um documento de teste.')]
+        mock_nlp.return_value = mock_doc
+        mock_nlp.meta = {'name': 'pt_core_news_sm'}
+        mock_spacy_load.return_value = mock_nlp
+        
+        service = DocumentAnalysisService(mock_pdf_extractor)
+        service.nlp = mock_nlp
+        
+        analysis = service.analyze_document(document)
+        
+        assert analysis.document == document
+        assert analysis.model_used == 'spacy'
+        assert analysis.analysis_metadata['provider_used'] == 'spacy'
+        assert analysis.analysis_metadata['fallback_reason'] == 'not_configured'
 
 

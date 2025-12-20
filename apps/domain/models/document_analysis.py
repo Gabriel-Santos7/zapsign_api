@@ -8,7 +8,8 @@ class DocumentAnalysis(models.Model):
     summary = models.TextField(blank=True)
     insights = models.JSONField(default=dict, blank=True)
     analyzed_at = models.DateTimeField(auto_now_add=True)
-    model_used = models.CharField(max_length=100, default='gpt-3.5-turbo')
+    model_used = models.CharField(max_length=100, default='spacy')
+    analysis_metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
         db_table = 'document_analyses'

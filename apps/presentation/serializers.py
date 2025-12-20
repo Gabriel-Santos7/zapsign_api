@@ -132,7 +132,7 @@ class DocumentCreateSerializer(serializers.Serializer):
 class DocumentAnalysisSerializer(serializers.ModelSerializer):
     class Meta:
         model = DocumentAnalysis
-        fields = ['id', 'document', 'missing_topics', 'summary', 'insights', 'analyzed_at', 'model_used']
+        fields = ['id', 'document', 'missing_topics', 'summary', 'insights', 'analyzed_at', 'model_used', 'analysis_metadata']
         read_only_fields = ['id', 'analyzed_at']
 
 

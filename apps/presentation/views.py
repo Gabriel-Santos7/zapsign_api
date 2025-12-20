@@ -81,9 +81,29 @@ class DocumentViewSet(viewsets.ModelViewSet):
             analysis = service.analyze_document(document)
             return Response(DocumentAnalysisSerializer(analysis).data, status=status.HTTP_200_OK)
         except ValueError as e:
+            # ValueError usually means user input issue (e.g., PDF download failed)
             return error_response(str(e), status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return error_response('Failed to analyze document', status.HTTP_500_INTERNAL_SERVER_ERROR, {'detail': str(e)})
+            error_detail = str(e)
+            # Provide more user-friendly error messages
+            if 'download PDF' in error_detail or '403' in error_detail or '404' in error_detail:
+                return error_response(
+                    'Não foi possível baixar o PDF para análise. Verifique se a URL está acessível e se o arquivo existe.',
+                    status.HTTP_400_BAD_REQUEST,
+                    {'detail': error_detail, 'url': document.file_url}
+                )
+            elif 'spaCy model' in error_detail:
+                return error_response(
+                    'Modelo de análise não configurado. Por favor, instale um modelo spaCy.',
+                    status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    {'detail': error_detail}
+                )
+            else:
+                return error_response(
+                    'Falha ao analisar documento',
+                    status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    {'detail': error_detail}
+                )
 
     @action(detail=True, methods=['get'])
     def insights(self, request, company_pk=None, pk=None):
@@ -92,7 +112,11 @@ class DocumentViewSet(viewsets.ModelViewSet):
             analysis = document.analysis
             return Response(DocumentAnalysisSerializer(analysis).data, status=status.HTTP_200_OK)
         except DocumentAnalysis.DoesNotExist:
-            return error_response('Document has not been analyzed yet', status.HTTP_404_NOT_FOUND)
+            return error_response(
+                'Documento ainda não foi analisado. Use o endpoint /analyze/ para realizar a análise.',
+                status.HTTP_404_NOT_FOUND,
+                {'document_id': document.id, 'document_name': document.name}
+            )
 
     @action(detail=True, methods=['post'])
     def add_signer(self, request, company_pk=None, pk=None):

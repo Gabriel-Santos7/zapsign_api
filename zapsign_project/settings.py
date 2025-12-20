@@ -223,3 +223,7 @@ LOGGING = {
 ZAPSIGN_SANDBOX_URL = config('ZAPSIGN_SANDBOX_URL', default='https://sandbox.api.zapsign.com.br')
 ZAPSIGN_PRODUCTION_URL = config('ZAPSIGN_PRODUCTION_URL', default='https://api.zapsign.com.br')
 
+# Document Analysis Configuration
+SPACY_MODEL = config('SPACY_MODEL', default='pt_core_news_lg')
+ANALYSIS_SUMMARY_LENGTH = config('ANALYSIS_SUMMARY_LENGTH', default=5, cast=int)
+

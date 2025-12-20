@@ -1,6 +1,7 @@
 from pathlib import Path
 from decouple import config
 import os
+import logging
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -149,11 +150,22 @@ REST_FRAMEWORK = {
     ],
 }
 
-CORS_ALLOWED_ORIGINS = config(
-    'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:4200,http://localhost:3000',
-    cast=lambda v: [s.strip() for s in v.split(',')]
-)
+# CORS Configuration
+cors_origins_env = config('CORS_ALLOWED_ORIGINS', default='')
+if cors_origins_env:
+    CORS_ALLOWED_ORIGINS = [s.strip() for s in cors_origins_env.split(',') if s.strip()]
+else:
+    # Fallback: sempre inclui o frontend do Render
+    CORS_ALLOWED_ORIGINS = [
+        'http://localhost:4200',
+        'http://localhost:3000',
+        'https://zapsign-front1.onrender.com',
+    ]
+
+# Log para debug (usar print para garantir que aparece nos logs do Render)
+print(f'[CORS] CORS_ALLOWED_ORIGINS configurado: {CORS_ALLOWED_ORIGINS}')
+logger = logging.getLogger(__name__)
+logger.info(f'CORS_ALLOWED_ORIGINS configurado: {CORS_ALLOWED_ORIGINS}')
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
@@ -176,6 +188,9 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 CORS_PREFLIGHT_MAX_AGE = 86400
+
+# Garantir que CORS está habilitado explicitamente
+CORS_ALLOW_ALL_ORIGINS = False  # Não permitir todas as origens por segurança
 
 LOGGING = {
     'version': 1,

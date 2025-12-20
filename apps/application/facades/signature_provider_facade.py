@@ -101,6 +101,12 @@ class SignatureProviderFacade:
             document.provider_status = 'signed'
             document.internal_status = 'signed'
             document.save()
+            
+            # Atualiza todos os signatários para "signed" quando o documento é assinado
+            signers_updated = document.signers.filter(status__in=['pending', 'in_progress']).update(status='signed')
+            if signers_updated > 0:
+                logger.info(f'Updated {signers_updated} signer(s) to signed status for document {document.token}')
+            
             logger.info(f'Document signed: {document.token}')
         
         elif event_type == 'signer_signed':
@@ -111,15 +117,20 @@ class SignatureProviderFacade:
                     signer = document.signers.get(token=signer_token)
                     signer.status = 'signed'
                     signer.save()
+                    logger.info(f'Signer signed: {signer.email} (token: {signer_token})')
                     
+                    # Verifica se todos os signatários assinaram
                     all_signed = all(s.status == 'signed' for s in document.signers.all())
                     if all_signed:
                         document.provider_status = 'signed'
                         document.internal_status = 'signed'
+                        logger.info(f'All signers signed. Document {document.token} status updated to signed')
                     else:
                         document.internal_status = 'in_progress'
+                        pending_count = document.signers.exclude(status='signed').count()
+                        logger.info(f'Document {document.token} status updated to in_progress ({pending_count} signer(s) pending)')
+                    
                     document.save()
-                    logger.info(f'Signer signed: {signer.email}')
                 except Signer.DoesNotExist:
                     logger.warning(f'Signer not found for token: {signer_token}')
         

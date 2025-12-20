@@ -100,6 +100,12 @@ class SignatureService:
                     signer.save()
                 except Signer.DoesNotExist:
                     pass
+        
+        # Se o documento está assinado no provider, atualiza todos os signatários pendentes
+        if document.provider_status == 'signed':
+            signers_updated = document.signers.filter(status__in=['pending', 'in_progress']).update(status='signed')
+            if signers_updated > 0:
+                logger.info(f'Updated {signers_updated} signer(s) to signed status during status refresh for document {document.token}')
 
         document.internal_status = self._calculate_internal_status(document, document.provider_status)
         document.save()

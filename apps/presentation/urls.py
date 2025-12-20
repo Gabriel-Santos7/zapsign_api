@@ -36,6 +36,9 @@ urlpatterns = [
     path('companies/<int:company_pk>/documents/<int:pk>/refresh_status/', DocumentViewSet.as_view({
         'post': 'refresh_status'
     }), name='document-refresh-status'),
+    path('companies/<int:company_pk>/documents/<int:pk>/send_to_signature/', DocumentViewSet.as_view({
+        'post': 'send_to_signature'
+    }), name='document-send-to-signature'),
     path('companies/<int:company_pk>/documents/alerts/', DocumentViewSet.as_view({
         'get': 'alerts'
     }), name='document-alerts'),

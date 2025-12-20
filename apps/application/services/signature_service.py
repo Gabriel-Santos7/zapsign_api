@@ -20,8 +20,38 @@ class SignatureService:
         url_pdf: str,
         signers_data: List[Dict],
         created_by: Optional[User] = None,
+        save_as_draft: bool = False,
         **kwargs
     ) -> Document:
+        if save_as_draft:
+            # Criar como rascunho sem enviar para o provider
+            document = Document.objects.create(
+                company=company,
+                name=name,
+                open_id=None,
+                token=None,
+                provider_status=None,
+                internal_status='draft',
+                file_url=url_pdf,
+                date_limit_to_sign=kwargs.get('date_limit_to_sign'),
+                created_by=created_by,
+            )
+
+            # Criar signatários sem token/sign_url (serão criados quando enviar para assinatura)
+            for signer_data in signers_data:
+                Signer.objects.create(
+                    document=document,
+                    name=signer_data.get('name', ''),
+                    email=signer_data.get('email', ''),
+                    token=None,
+                    sign_url=None,
+                    status='pending',
+                )
+
+            logger.info(f'Document {document.id} created as draft')
+            return document
+        
+        # Fluxo normal: enviar para o provider
         response = self.facade.create_document(
             company=company,
             name=name,
@@ -147,6 +177,56 @@ class SignatureService:
         )
 
         return signer
+
+    def send_draft_to_signature(self, document: Document) -> Document:
+        """Envia um documento rascunho para assinatura no provider"""
+        if document.internal_status != 'draft':
+            raise ValueError('Only draft documents can be sent to signature')
+        
+        if not document.token:
+            # Criar documento no provider
+            signers_data = [
+                {
+                    'name': signer.name,
+                    'email': signer.email
+                }
+                for signer in document.signers.all()
+            ]
+            
+            response = self.facade.create_document(
+                company=document.company,
+                name=document.name,
+                url_pdf=document.file_url,
+                signers=signers_data,
+                date_limit_to_sign=document.date_limit_to_sign
+            )
+            
+            # Atualizar documento com dados do provider
+            document.open_id = str(response.get('open_id', ''))
+            document.token = response.get('token', '')
+            document.provider_status = response.get('status', '')
+            document.internal_status = self.facade.to_internal_status(
+                document.company, 
+                response.get('status', 'pending')
+            )
+            
+            # Atualizar signatários com dados do provider
+            signers_response = response.get('signers', [])
+            for i, signer_data in enumerate(signers_response):
+                if i < document.signers.count():
+                    signer = document.signers.all()[i]
+                    signer.token = signer_data.get('token')
+                    signer.sign_url = signer_data.get('sign_url')
+                    signer.status = self._map_signer_status(signer_data.get('status', 'pending'))
+                    signer.save()
+            
+            document.save()
+            logger.info(f'Draft document {document.id} sent to signature provider')
+            
+            # Disparar análise automática
+            self._trigger_automatic_analysis(document)
+        
+        return document
 
     def cancel_document(self, document: Document) -> Document:
         if not document.token:

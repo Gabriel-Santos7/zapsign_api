@@ -57,6 +57,7 @@ class DocumentCreateSerializer(serializers.Serializer):
         min_length=1
     )
     date_limit_to_sign = serializers.DateTimeField(required=False)
+    save_as_draft = serializers.BooleanField(default=False, required=False)
 
     def validate_url_pdf(self, value):
         validator = URLValidator()
@@ -68,21 +69,30 @@ class DocumentCreateSerializer(serializers.Serializer):
         if not value.lower().endswith('.pdf'):
             raise serializers.ValidationError('URL must point to a PDF file')
         
-        try:
-            response = requests.head(value, timeout=10, allow_redirects=True)
-            if response.status_code == 200:
-                content_length = response.headers.get('Content-Length')
-                if content_length:
-                    try:
-                        file_size_mb = int(content_length) / (1024 * 1024)
-                        if file_size_mb > 10:
-                            raise serializers.ValidationError(f'PDF file size ({file_size_mb:.2f}MB) exceeds maximum limit of 10MB')
-                    except (ValueError, TypeError):
-                        pass
-        except requests.RequestException:
-            pass
-        
         return value
+    
+    def validate(self, data):
+        # Se não for rascunho, valida acesso ao PDF
+        if not data.get('save_as_draft', False):
+            url_pdf = data.get('url_pdf')
+            if url_pdf:
+                try:
+                    response = requests.head(url_pdf, timeout=10, allow_redirects=True)
+                    if response.status_code == 200:
+                        content_length = response.headers.get('Content-Length')
+                        if content_length:
+                            try:
+                                file_size_mb = int(content_length) / (1024 * 1024)
+                                if file_size_mb > 10:
+                                    raise serializers.ValidationError({
+                                        'url_pdf': f'PDF file size ({file_size_mb:.2f}MB) exceeds maximum limit of 10MB'
+                                    })
+                            except (ValueError, TypeError):
+                                pass
+                except requests.RequestException:
+                    # Para rascunhos, não valida acesso HTTP
+                    pass
+        return data
 
     def validate_signers(self, value):
         if not value:
@@ -101,16 +111,19 @@ class DocumentCreateSerializer(serializers.Serializer):
                 raise serializers.ValidationError(f'Invalid email format: {email}')
         
         return value
+    
 
     def create(self, validated_data):
         company = self.context['company']
         created_by = self.context.get('user')
         signers_data = validated_data.pop('signers')
+        save_as_draft = validated_data.pop('save_as_draft', False)
         
         service = SignatureService()
         return service.create_document(
             company=company,
             created_by=created_by,
+            save_as_draft=save_as_draft,
             **validated_data,
             signers_data=signers_data
         )

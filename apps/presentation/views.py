@@ -60,6 +60,20 @@ class DocumentViewSet(viewsets.ModelViewSet):
         return Response(DocumentSerializer(document).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'])
+    def send_to_signature(self, request, company_pk=None, pk=None):
+        """Envia um documento rascunho para assinatura"""
+        document = self.get_object()
+        try:
+            service = SignatureService()
+            document = service.send_draft_to_signature(document)
+            return Response(DocumentSerializer(document).data, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return error_response(str(e), status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f'Error sending draft to signature: {str(e)}')
+            return error_response('Failed to send document to signature', status.HTTP_500_INTERNAL_SERVER_ERROR, {'detail': str(e)})
+
+    @action(detail=True, methods=['post'])
     def analyze(self, request, company_pk=None, pk=None):
         document = self.get_object()
         try:

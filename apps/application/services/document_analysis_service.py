@@ -2,7 +2,6 @@ import logging
 import re
 from typing import Optional, List, Dict
 from collections import Counter
-import spacy
 from apps.domain.models import Document, DocumentAnalysis
 from apps.infrastructure.services.pdf_extractor import PDFExtractorService
 
@@ -19,10 +18,15 @@ class DocumentAnalysisService:
     def nlp(self):
         if DocumentAnalysisService._nlp_model is None:
             try:
+                import spacy
                 DocumentAnalysisService._nlp_model = spacy.load('pt_core_news_sm')
+            except ImportError:
+                logger.warning('spaCy is not installed. Please install with: pip install spacy')
+                DocumentAnalysisService._nlp_model = False
             except OSError:
                 logger.warning('spaCy Portuguese model not found. Please run: python -m spacy download pt_core_news_sm')
                 try:
+                    import spacy
                     DocumentAnalysisService._nlp_model = spacy.load('en_core_web_sm')
                     logger.warning('Using English model as fallback')
                 except OSError:

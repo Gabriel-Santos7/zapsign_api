@@ -199,3 +199,124 @@ Use o token retornado no header:
 Authorization: Token <seu-token>
 ```
 
+## 🔄 Fluxos da Aplicação
+
+### Fluxo de Criação de Documento
+
+```mermaid
+flowchart TD
+    Start([Usuário cria documento]) --> Form[Formulário com nome, URL PDF e signatários]
+    Form --> Validate{Validação}
+    Validate -->|"Inválido"| Error[Exibe erros]
+    Validate -->|"Válido"| API[Envia para API ZapSign]
+    API --> ZapSign[API ZapSign cria documento]
+    ZapSign --> Response[Retorna token e open_id]
+    Response --> Save[Salva no banco de dados]
+    Save --> Success[Documento criado com sucesso]
+    Error --> Form
+```
+
+### Fluxo de Análise de Documento com IA
+
+Este fluxo mostra como a API analisa documentos usando Google Gemini com fallback automático para spaCy:
+
+```mermaid
+flowchart TD
+    Start([Usuário solicita análise]) --> Extract[Extrai texto do PDF]
+    Extract --> CheckGemini{Gemini configurado?}
+    CheckGemini -->|"Não"| UseSpacy[Usa spaCy para análise]
+    CheckGemini -->|"Sim"| TryGemini[Tenta analisar com Gemini]
+    TryGemini --> GeminiSuccess{Sucesso?}
+    GeminiSuccess -->|"Sim"| GeminiResult[Análise completa com Gemini]
+    GeminiSuccess -->|"Erro de API"| Fallback1[Fallback para spaCy]
+    GeminiSuccess -->|"Timeout"| Fallback2[Fallback para spaCy]
+    GeminiSuccess -->|"Rate Limit"| Fallback3[Fallback para spaCy]
+    Fallback1 --> UseSpacy
+    Fallback2 --> UseSpacy
+    Fallback3 --> UseSpacy
+    UseSpacy --> SpacyResult[Análise completa com spaCy]
+    GeminiResult --> Save[Salva análise no banco]
+    SpacyResult --> Save
+    Save --> Return[Retorna insights, resumo e tópicos faltantes]
+```
+
+### Fluxo Detalhado: Análise com Gemini e Fallback
+
+```mermaid
+sequenceDiagram
+    participant User as Usuário
+    participant API as API ZapSign
+    participant Service as DocumentAnalysisService
+    participant Gemini as Google Gemini
+    participant Spacy as spaCy
+    participant DB as Banco de Dados
+
+    User->>API: POST /documents/:id/analyze
+    API->>Service: analyze_document()
+    Service->>Service: Extrai texto do PDF
+    
+    alt Gemini está configurado
+        Service->>Gemini: Envia texto para análise
+        alt Gemini responde com sucesso
+            Gemini-->>Service: Insights, resumo, tópicos
+            Service->>DB: Salva análise (provider: gemini)
+            DB-->>Service: Análise salva
+            Service-->>API: Retorna análise completa
+        else Gemini falha (erro/timeout/rate limit)
+            Gemini-->>Service: Erro
+            Service->>Spacy: Fallback: analisa com spaCy
+            Spacy-->>Service: Insights, resumo, tópicos
+            Service->>DB: Salva análise (provider: spacy, fallback_reason)
+            DB-->>Service: Análise salva
+            Service-->>API: Retorna análise completa
+        end
+    else Gemini não configurado
+        Service->>Spacy: Analisa diretamente com spaCy
+        Spacy-->>Service: Insights, resumo, tópicos
+        Service->>DB: Salva análise (provider: spacy)
+        DB-->>Service: Análise salva
+        Service-->>API: Retorna análise completa
+    end
+    
+    API-->>User: Resposta com análise
+```
+
+### Fluxo de Envio para Assinatura
+
+```mermaid
+flowchart TD
+    Start([Usuário envia documento para assinatura]) --> CheckStatus{Status do documento}
+    CheckStatus -->|"Rascunho"| Validate{Validações}
+    CheckStatus -->|"Outro status"| Error1[Erro: documento não está em rascunho]
+    Validate -->|"Sem signatários"| Error2[Erro: adicione signatários]
+    Validate -->|"Válido"| SendAPI[Envia para API ZapSign]
+    SendAPI --> ZapSign[API ZapSign processa]
+    ZapSign --> UpdateStatus[Atualiza status para 'pending']
+    UpdateStatus --> Notify[Notifica signatários por email]
+    Notify --> Success[Documento enviado com sucesso]
+    Error1 --> End
+    Error2 --> End
+```
+
+### Fluxo de Webhook
+
+```mermaid
+sequenceDiagram
+    participant ZapSign as API ZapSign
+    participant Webhook as Webhook Handler
+    participant Facade as SignatureProviderFacade
+    participant DB as Banco de Dados
+
+    ZapSign->>Webhook: POST /webhooks/zapsign/
+    Webhook->>Webhook: Extrai token do documento
+    Webhook->>DB: Busca documento pelo token
+    DB-->>Webhook: Documento encontrado
+    Webhook->>Facade: process_webhook_event()
+    Facade->>Facade: Processa evento (assinado, cancelado, etc.)
+    Facade->>DB: Atualiza status do documento
+    Facade->>DB: Atualiza status dos signatários
+    DB-->>Facade: Atualização concluída
+    Facade-->>Webhook: Processamento concluído
+    Webhook-->>ZapSign: 200 OK
+```
+

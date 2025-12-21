@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+    'drf_spectacular',
     'apps.domain',
     'apps.application',
     'apps.infrastructure',
@@ -148,6 +149,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # CORS Configuration - Permitir todas as origens temporariamente
@@ -233,4 +235,85 @@ GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-3-flash-preview')
 GEMINI_ENABLED = config('GEMINI_ENABLED', default=True, cast=bool)
 GEMINI_MAX_TEXT_LENGTH = config('GEMINI_MAX_TEXT_LENGTH', default=50000, cast=int)
 GEMINI_TIMEOUT = config('GEMINI_TIMEOUT', default=30, cast=int)
+
+# Swagger/OpenAPI Configuration
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'ZapSign API',
+    'DESCRIPTION': '''
+    API para gerenciamento de documentos e assinaturas digitais.
+    
+    ## Funcionalidades Principais
+    
+    - **Gerenciamento de Documentos**: Criação, listagem, atualização e exclusão de documentos
+    - **Análise com IA**: Análise inteligente de documentos usando spaCy e Google Gemini
+    - **Assinatura Digital**: Integração com provedores de assinatura digital (ZapSign)
+    - **Gerenciamento de Signatários**: Adição e acompanhamento de signatários
+    - **Webhooks**: Recebimento de eventos dos provedores de assinatura
+    - **Métricas e Alertas**: Monitoramento de documentos e alertas importantes
+    
+    ## Autenticação
+    
+    A API utiliza autenticação por Token. Para obter um token:
+    
+    1. Faça uma requisição POST para `/api/api-token-auth/` com `username` e `password`
+    2. Use o token retornado no header: `Authorization: Token <seu-token>`
+    
+    ## Códigos de Status HTTP
+    
+    - `200 OK`: Requisição bem-sucedida
+    - `201 Created`: Recurso criado com sucesso
+    - `400 Bad Request`: Erro na requisição (validação, dados inválidos)
+    - `401 Unauthorized`: Token de autenticação inválido ou ausente
+    - `404 Not Found`: Recurso não encontrado
+    - `500 Internal Server Error`: Erro interno do servidor
+    ''',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'CONTACT': {
+        'name': 'ZapSign API Support',
+    },
+    'LICENSE': {
+        'name': 'Proprietary',
+    },
+    'TAGS': [
+        {'name': 'Autenticação', 'description': 'Endpoints para autenticação e obtenção de tokens'},
+        {'name': 'Providers', 'description': 'Gerenciamento de provedores de assinatura digital'},
+        {'name': 'Companies', 'description': 'Gerenciamento de empresas e configurações'},
+        {'name': 'Documents', 'description': 'Gerenciamento de documentos, análise com IA e operações de assinatura'},
+        {'name': 'Signers', 'description': 'Gerenciamento de signatários de documentos'},
+        {'name': 'Webhooks', 'description': 'Endpoints para recebimento de webhooks dos provedores'},
+        {'name': 'Health', 'description': 'Endpoints de verificação de saúde da API'},
+    ],
+    'AUTHENTICATION_WHITELIST': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'SERVERS': [
+        {'url': 'http://localhost:8000', 'description': 'Servidor de desenvolvimento'},
+    ],
+    'SCHEMA_PATH_PREFIX': '/api/',
+    'COMPONENT_SPLIT_REQUEST': True,
+    'COMPONENT_NO_READ_ONLY_REQUIRED': True,
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'displayOperationId': False,
+        'defaultModelsExpandDepth': 1,
+        'defaultModelExpandDepth': 1,
+        'displayRequestDuration': True,
+        'docExpansion': 'list',
+        'filter': True,
+        'showExtensions': True,
+        'showCommonExtensions': True,
+    },
+    'REDOC_UI_SETTINGS': {
+        'hideDownloadButton': False,
+        'hideHostname': False,
+        'hideSingleRequestSample': False,
+        'expandResponses': '200,201',
+        'pathInMiddlePanel': True,
+        'requiredPropsFirst': True,
+        'sortOperationsAlphabetically': False,
+        'sortTagsAlphabetically': True,
+    },
+}
 

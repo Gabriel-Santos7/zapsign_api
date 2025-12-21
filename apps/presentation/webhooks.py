@@ -4,12 +4,58 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
+from drf_spectacular.utils import extend_schema, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 from apps.domain.models import Document, Company, Signer
 from apps.application.facades.signature_provider_facade import SignatureProviderFacade
 
 logger = logging.getLogger('apps')
 
 
+@extend_schema(
+    summary='Receber webhook do provedor',
+    description='Endpoint público para recebimento de webhooks dos provedores de assinatura digital. Processa eventos como assinatura concluída, documento cancelado, etc.',
+    tags=['Webhooks'],
+    request={
+        'application/json': {
+            'type': 'object',
+            'description': 'Payload do webhook do provedor',
+            'examples': {
+                'zapsign_webhook': {
+                    'summary': 'Exemplo de webhook ZapSign',
+                    'value': {
+                        'token': 'abc123def456',
+                        'doc': {
+                            'token': 'abc123def456',
+                            'status': 'signed'
+                        },
+                        'event': 'document.signed'
+                    }
+                }
+            }
+        }
+    },
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'status': {
+                    'type': 'string',
+                    'example': 'ok'
+                }
+            }
+        }
+    },
+    parameters=[
+        {
+            'name': 'provider_code',
+            'in': 'path',
+            'description': 'Código do provedor (ex: zapsign)',
+            'required': True,
+            'schema': {'type': 'string'}
+        }
+    ],
+)
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])

@@ -28,24 +28,56 @@ class DocumentAnalysisService:
         if DocumentAnalysisService._nlp_model is None:
             try:
                 import spacy
+                import subprocess
+                import sys
+                
                 # Try to load preferred model from settings, fallback to smaller model
                 preferred_model = getattr(settings, 'SPACY_MODEL', 'pt_core_news_lg')
-                try:
-                    DocumentAnalysisService._nlp_model = spacy.load(preferred_model)
-                    logger.info(f'Loaded spaCy model: {preferred_model}')
-                except OSError:
-                    logger.warning(f'spaCy model {preferred_model} not found. Trying pt_core_news_sm...')
+                
+                def try_load_model(model_name: str) -> bool:
+                    """Tenta carregar um modelo, retorna True se sucesso"""
                     try:
-                        DocumentAnalysisService._nlp_model = spacy.load('pt_core_news_sm')
-                        logger.info('Loaded spaCy model: pt_core_news_sm')
+                        DocumentAnalysisService._nlp_model = spacy.load(model_name)
+                        logger.info(f'Loaded spaCy model: {model_name}')
+                        return True
                     except OSError:
-                        logger.warning('spaCy Portuguese model not found. Trying English model...')
-                        try:
-                            DocumentAnalysisService._nlp_model = spacy.load('en_core_web_sm')
-                            logger.warning('Using English model as fallback')
-                        except OSError:
-                            logger.error('No spaCy model available. Please install a model.')
-                            DocumentAnalysisService._nlp_model = False
+                        return False
+                
+                def try_download_model(model_name: str) -> bool:
+                    """Tenta baixar um modelo, retorna True se sucesso"""
+                    try:
+                        logger.info(f'Attempting to download spaCy model: {model_name}')
+                        subprocess.check_call([
+                            sys.executable, '-m', 'spacy', 'download', model_name
+                        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        logger.info(f'Successfully downloaded spaCy model: {model_name}')
+                        return True
+                    except (subprocess.CalledProcessError, Exception) as e:
+                        logger.warning(f'Failed to download spaCy model {model_name}: {str(e)}')
+                        return False
+                
+                # Tenta carregar modelo preferido
+                if try_load_model(preferred_model):
+                    pass  # Sucesso
+                # Se falhar, tenta baixar o modelo preferido
+                elif try_download_model(preferred_model) and try_load_model(preferred_model):
+                    pass  # Baixou e carregou com sucesso
+                # Se ainda falhar, tenta modelo menor
+                elif try_load_model('pt_core_news_sm'):
+                    pass  # Sucesso com modelo menor
+                # Se falhar, tenta baixar modelo menor
+                elif try_download_model('pt_core_news_sm') and try_load_model('pt_core_news_sm'):
+                    pass  # Baixou e carregou modelo menor
+                # Último recurso: modelo em inglês
+                elif try_load_model('en_core_web_sm'):
+                    logger.warning('Using English model as fallback')
+                # Tenta baixar modelo em inglês
+                elif try_download_model('en_core_web_sm') and try_load_model('en_core_web_sm'):
+                    logger.warning('Downloaded and using English model as fallback')
+                else:
+                    logger.error('No spaCy model available. Analysis will not work.')
+                    DocumentAnalysisService._nlp_model = False
+                    
             except ImportError:
                 logger.warning('spaCy is not installed. Please install with: pip install spacy')
                 DocumentAnalysisService._nlp_model = False

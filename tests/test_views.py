@@ -121,20 +121,23 @@ class TestDocumentViewSet:
         assert response.status_code == 200
         assert response.data['id'] == document.id
 
-    @patch('apps.application.services.document_analysis_service.DocumentAnalysisService')
+    @patch('apps.presentation.views.DocumentAnalysisService')
     def test_analyze_document(self, mock_service_class, api_client, user_with_token, company, document):
         user, token = user_with_token
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
         
+        # Create a real DocumentAnalysis instance for the serializer
+        from apps.domain.models import DocumentAnalysis
+        analysis = DocumentAnalysis.objects.create(
+            document=document,
+            missing_topics=[],
+            summary='Test summary',
+            insights={},
+            model_used='spacy'
+        )
+        
         mock_service = Mock()
-        mock_analysis = Mock()
-        mock_analysis.document = document
-        mock_analysis.missing_topics = []
-        mock_analysis.summary = 'Test summary'
-        mock_analysis.insights = {}
-        mock_analysis.analyzed_at = '2024-01-01T00:00:00Z'
-        mock_analysis.model_used = 'spacy'
-        mock_service.analyze_document.return_value = mock_analysis
+        mock_service.analyze_document.return_value = analysis
         mock_service_class.return_value = mock_service
         
         response = api_client.post(f'/api/companies/{company.id}/documents/{document.id}/analyze/')
@@ -170,6 +173,10 @@ class TestDocumentViewSet:
         user, token = user_with_token
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
         
+        # Document needs a token to add signer
+        document.token = 'test_token'
+        document.save()
+        
         mock_facade = Mock()
         mock_facade.add_signer.return_value = {
             'token': 'new_signer_token',
@@ -192,6 +199,10 @@ class TestDocumentViewSet:
     def test_cancel_document(self, mock_facade_class, api_client, user_with_token, company, document):
         user, token = user_with_token
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+        
+        # Document needs a token to cancel
+        document.token = 'test_token'
+        document.save()
         
         mock_facade = Mock()
         mock_facade.cancel_document.return_value = {}
@@ -283,5 +294,6 @@ class TestWebhookHandler:
         response = api_client.post('/api/webhooks/zapsign/', payload, format='json')
         
         assert response.status_code == 200
+
 
 
